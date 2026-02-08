@@ -1,66 +1,43 @@
-export default function Home() {
+import LeadForm from "@/components/LeadForm";
+
+export default function HomePage() {
   return (
-    <main style={{ padding: 40, fontFamily: "system-ui", maxWidth: 600 }}>
-      <h1>FREE Home Improvement Estimate</h1>
-
-      <p><strong>Steve Central Homes</strong></p>
-      <p>Roofing • Windows • Siding</p>
-      <p>Florida • Local • Trusted</p>
-
-      <hr style={{ margin: "30px 0" }} />
-
-      <h2>What can we help you with?</h2>
-
-      <div style={{ display: "grid", gap: 12 }}>
-        <a href="#form"><button type="button">🏠 Free Roof Estimate</button></a>
-        <a href="#form"><button type="button">🪟 Windows Quote</button></a>
-        <a href="#form"><button type="button">🧱 Siding Quote</button></a>
-        <a href="#form"><button type="button">💬 Talk to a Pro</button></a>
-      </div>
-
-      <hr style={{ margin: "40px 0" }} />
-
-      <h2 id="form">Book Your Free Estimate</h2>
-
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          const form = e.currentTarget as any;
-
-          const data = {
-            full_name: form.full_name.value,
-            phone: form.phone.value,
-            email: form.email.value,
-            service: form.service.value,
-            notes: form.notes.value,
-          };
-
-          await fetch("/api/lead", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data),
-          });
-
-          alert("Thanks! We’ll contact you shortly.");
-          form.reset();
+    <main
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "#0f172a",
+        padding: "40px 16px",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "flex-start",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 1200,
+          display: "grid",
+          gridTemplateColumns: "1fr 420px",
+          gap: 32,
         }}
-        style={{ display: "grid", gap: 12 }}
       >
-        <input name="full_name" placeholder="Full Name" required />
-        <input name="phone" placeholder="Phone Number" required />
-        <input name="email" placeholder="Email (optional)" />
+        {/* Left content */}
+        <section style={{ color: "white" }}>
+          <h1 style={{ fontSize: 40, fontWeight: 800, marginBottom: 12 }}>
+            Get Your Free Home Improvement Estimate
+          </h1>
 
-        <select name="service" required>
-          <option value="">Select Service</option>
-          <option value="roofing">Roofing</option>
-          <option value="windows">Windows</option>
-          <option value="siding">Siding</option>
-        </select>
+          <p style={{ fontSize: 18, opacity: 0.9, maxWidth: 600 }}>
+            Roofing, siding, and window replacements done right — clear pricing,
+            quality installs, and real warranties.
+          </p>
+        </section>
 
-        <textarea name="notes" placeholder="Tell us about your project"></textarea>
-
-        <button type="submit">📅 Book Free Estimate</button>
-      </form>
+        {/* Right form */}
+        <aside>
+          <LeadForm />
+        </aside>
+      </div>
     </main>
   );
 }
