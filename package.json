@@ -18,4 +18,3 @@
     "@types/node": "^20.11.30"
   }
 }
-npm install @supabase/supabase-js
