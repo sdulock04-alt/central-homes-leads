@@ -1,100 +1,64 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-type LeadBody = {
-  name?: string;
-  phone?: string;
-  email?: string;
-  services?: string[];
-  address?: string;
-  city?: string;
-  zip?: string;
-  timeframe?: string;
-  notes?: string;
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-  // anti-spam (optional)
-  website?: string;     // honeypot (should be empty)
-  formStartMs?: number; // Date.now() when form opened
-};
-
-function isValidPhone(phone: string) {
-  const digits = phone.replace(/\D/g, "");
-  return digits.length >= 10 && digits.length <= 15;
-}
-
-function isValidEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-export async function GET() {
-  return NextResponse.json({ ok: true, message: "Lead API live" });
-}
-
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as LeadBody;
+    const body = await req.json();
 
-    // Honeypot
-    if (body.website && body.website.trim().length > 0) {
-      return NextResponse.json({ ok: true }, { status: 200 });
-    }
-
-    // Timing check
-    if (typeof body.formStartMs === "number") {
-      const elapsed = Date.now() - body.formStartMs;
-      if (elapsed < 1200) return NextResponse.json({ ok: true }, { status: 200 });
-    }
-
-    const name = (body.name ?? "").trim();
-    const phone = (body.phone ?? "").trim();
-    const email = (body.email ?? "").trim();
-
-    if (name.length < 2) {
-      return NextResponse.json({ ok: false, error: "Name is required." }, { status: 400 });
-    }
-    if (!isValidPhone(phone)) {
-      return NextResponse.json({ ok: false, error: "Valid phone is required." }, { status: 400 });
-    }
-    if (email && !isValidEmail(email)) {
-      return NextResponse.json({ ok: false, error: "Valid email required." }, { status: 400 });
-    }
-
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !serviceKey) {
-      return NextResponse.json(
-        { ok: false, error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY" },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, serviceKey, {
-      auth: { persistSession: false },
-    });
-
-    const { error } = await supabase.from("leads").insert({
+    const {
       name,
       phone,
-      email: email || null,
-      services: Array.isArray(body.services) ? body.services : [],
-      address: body.address?.trim() || null,
-      city: body.city?.trim() || null,
-      zip: body.zip?.trim() || null,
-      timeframe: body.timeframe?.trim() || null,
-      notes: body.notes?.trim() || null,
-      source: "central-homes-website",
-    });
+      email,
+      service,
+      address,
+      city,
+      state,
+      zip,
+      notes,
+    } = body;
+
+    // Basic validation
+    if (!name || !phone || !service) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabase.from("leads").insert([
+      {
+        full_name: name,                 // ✅ MATCHES YOUR SUPABASE COLUMN
+        phone: phone,
+        email: email || null,
+        service: service,
+        address: address || null,
+        city: city || null,
+        state: state || null,
+        zip: zip || null,
+        notes: notes || null,
+        source: "central-homes-website",
+      },
+    ]);
 
     if (error) {
+      console.error("Supabase insert error:", error);
       return NextResponse.json(
-        { ok: false, error: `Supabase insert failed: ${error.message}` },
+        { error: "Supabase insert failed" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ ok: true }, { status: 200 });
-  } catch {
-    return NextResponse.json({ ok: false, error: "Invalid request body." }, { status: 400 });
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("API error:", err);
+    return NextResponse.json(
+      { error: "Invalid request" },
+      { status: 400 }
+    );
   }
 }
