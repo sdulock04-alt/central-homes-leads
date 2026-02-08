@@ -1,46 +1,70 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+export const runtime = "nodejs";
+
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+function asString(v: unknown) {
+  if (typeof v === "string") return v.trim();
+  return "";
+}
+
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
 
-    const {
-      name,
-      phone,
-      email,
-      service,
-      address,
-      city,
-      state,
-      zip,
-      notes,
-    } = body;
+    // Accept either { name } OR { firstName, lastName }
+    const name =
+      asString(body.name) ||
+      `${asString(body.firstName)} ${asString(body.lastName)}`.trim();
 
-    // Basic validation
+    const phone = asString(body.phone);
+
+    // Accept either { service: "Roofing" } OR { services: ["Roofing"] }
+    const service =
+      asString(body.service) ||
+      (Array.isArray(body.services) ? asString(body.services[0]) : "");
+
+    const email = asString(body.email) || null;
+    const address = asString(body.address) || null;
+    const city = asString(body.city) || null;
+    const state = asString(body.state) || null;
+    const zip = asString(body.zip) || null;
+    const notes = asString(body.notes) || null;
+
+    // Spam honeypot support (optional)
+    const website = asString(body.website);
+    if (website) {
+      return NextResponse.json({ success: true }); // silently ignore bots
+    }
+
+    // Required fields
     if (!name || !phone || !service) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        {
+          error: "Missing required fields",
+          required: ["name", "phone", "service"],
+          received: { name: !!name, phone: !!phone, service: !!service },
+        },
         { status: 400 }
       );
     }
 
     const { error } = await supabase.from("leads").insert([
       {
-        full_name: name,                 // ✅ MATCHES YOUR SUPABASE COLUMN
-        phone: phone,
-        email: email || null,
-        service: service,
-        address: address || null,
-        city: city || null,
-        state: state || null,
-        zip: zip || null,
-        notes: notes || null,
+        full_name: name, // ✅ matches your Supabase column
+        phone,
+        email,
+        service,
+        address,
+        city,
+        state,
+        zip,
+        notes,
         source: "central-homes-website",
       },
     ]);
@@ -48,7 +72,7 @@ export async function POST(req: Request) {
     if (error) {
       console.error("Supabase insert error:", error);
       return NextResponse.json(
-        { error: "Supabase insert failed" },
+        { error: "Supabase insert failed", details: error.message },
         { status: 500 }
       );
     }
@@ -56,9 +80,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("API error:", err);
-    return NextResponse.json(
-      { error: "Invalid request" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 }
